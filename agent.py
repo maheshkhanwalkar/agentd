@@ -1,6 +1,10 @@
 import copy
+import datetime
+import os
+import sys
 
 from deepagents import create_deep_agent
+from deepagents.backends import FilesystemBackend
 
 SYSTEM_PROMPT = """
 You are an agentic coding assistant. For a user's exploratory questions, be conversational and ask questions
@@ -9,7 +13,12 @@ to dig further. Otherwise, focus on execution.
 
 class ManagedAgent:
     def __init__(self, model_name: str):
-        self.agent = create_deep_agent(model_name, system_prompt=SYSTEM_PROMPT)
+        full_prompt = SYSTEM_PROMPT + self._inject_system_context()
+
+        self.agent = create_deep_agent(model_name,
+           system_prompt=full_prompt,
+           backend=FilesystemBackend(os.getcwd(), False)
+        )
         self.messages_memory = {
             "messages": []
         }
@@ -28,3 +37,12 @@ class ManagedAgent:
             "role": actor,
             "content": message,
         })
+
+    @staticmethod
+    def _inject_system_context() -> str:
+        cwd = os.getcwd()
+        os_platform = sys.platform
+        curr_time = datetime.datetime.now().strftime("%Y%m%d")
+
+        return (f"\nThe user's current directory is {cwd}. The OS is {os_platform}. "
+                f"The current date is {curr_time}.")
